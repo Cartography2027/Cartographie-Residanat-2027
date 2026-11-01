@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function me() { return request.auth.token.email.lower(); }
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    match /users/{email} {
+      allow read, write: if signedIn() && me() == email;
+      match /blobs/{id} {
+        allow read, write: if signedIn() && me() == email;
+      }
+    }
+  }
+}

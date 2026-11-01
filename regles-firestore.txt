@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function me() { return request.auth.token.email.lower(); }
+    function allowed() {
+      return request.auth != null && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/allowed/$(me()));
+    }
+    match /users/{email} {
+      allow read, write: if allowed() && me() == email;
+      match /blobs/{id} {
+        allow read, write: if allowed() && me() == email;
+      }
+    }
+    match /allowed/{email} {
+      allow read: if request.auth != null && me() == email;
+    }
+  }
+}
