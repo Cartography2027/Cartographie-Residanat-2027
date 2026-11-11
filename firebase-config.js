@@ -8,6 +8,6 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: "448376198602",
   appId: "1:448376198602:web:1b136438c5f2ebc7e7ab33"
 };
-// true  = tout le monde peut créer un compte gratuit (règles : regles-firestore-ouvert.txt)
 // false = seuls les emails de la collection « allowed » peuvent entrer (règles : regles-firestore.txt)
+// true  = tout le monde peut créer un compte gratuit (règles : regles-firestore-ouvert.txt)
 window.FIREBASE_OPEN = true;
