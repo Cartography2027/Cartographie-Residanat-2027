@@ -217,7 +217,7 @@
   }
   function denied() {
     try {
-      ss && ss.setItem("rs-msg", "Ton email n’est pas (ou plus) dans la liste autorisée. Demande l’accès à Dr M.");
+      ss && ss.setItem("rs-msg", OPEN ? "Session refusée par le serveur : reconnecte-toi." : "Ton email n’est pas (ou plus) dans la liste autorisée. Demande l’accès à Dr M.");
       localStorage.removeItem(K);
     } catch (x) {
     }
@@ -254,6 +254,43 @@
           return p && p.providerId === "google.com";
         }) ? "google" : "password";
         fire();
+        if (OPEN && A.provider === "password" && !u.emailVerified) {
+          u.reload().then(function() {
+            var cu = c.auth.currentUser;
+            if (cu && cu.emailVerified) {
+              cu.getIdToken(true).then(function() {
+                location.reload();
+              }, function() {
+                location.reload();
+              });
+              return;
+            }
+            status("Enregistré sur cet appareil · clique sur le lien reçu par email pour activer la sauvegarde en ligne");
+            A.pendingVerify = true;
+            A.resend = function() {
+              return cu.sendEmailVerification();
+            };
+            fire();
+            if (!window.__vchk) {
+              window.__vchk = setInterval(function() {
+                var x = c.auth.currentUser;
+                if (!x) return;
+                x.reload().then(function() {
+                  if (c.auth.currentUser && c.auth.currentUser.emailVerified) {
+                    clearInterval(window.__vchk);
+                    c.auth.currentUser.getIdToken(true).then(function() {
+                      location.reload();
+                    });
+                  }
+                }).catch(function() {
+                });
+              }, 2e4);
+            }
+          }).catch(function() {
+            status("Hors ligne · enregistré sur l’appareil");
+          });
+          return;
+        }
         var ref = c.db.collection("users").doc(email), timer = null, btimers = {};
         function fail(err) {
           if (err && err.code === "permission-denied") denied();
@@ -431,7 +468,7 @@
       var isPwd = !(u.providerData || []).some(function(p) {
         return p && p.providerId === "google.com";
       });
-      if (isPwd && !u.emailVerified) {
+      if (isPwd && !u.emailVerified && !OPEN) {
         busy(false);
         say("Vérifie ton email : clique sur le lien envoyé à " + em + " (regarde aussi les spams), puis reconnecte-toi ici.", true);
         firebase.auth().signOut();
@@ -497,6 +534,15 @@
             return;
           }
           c.auth.createUserWithEmailAndPassword(em, pw).then(function(r) {
+            if (OPEN) {
+              try {
+                r.user.sendEmailVerification().catch(function() {
+                });
+              } catch (x) {
+              }
+              after(r.user);
+              return;
+            }
             return r.user.sendEmailVerification().then(function() {
               busy(false);
               c.auth.signOut();
